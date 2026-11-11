@@ -27,6 +27,10 @@ export class LocalStorageAdapter {
 
   stream(rel) { return createReadStream(this.resolve(rel)); }
 
+  async exists(rel) {
+    try { await fs.access(this.resolve(rel)); return true; } catch { return false; }
+  }
+
   async remove(rel) { await fs.rm(this.resolve(rel), { force: true }); }
 }
 
@@ -98,6 +102,7 @@ export const storage = {
   get cloudinary() { return cloudinaryAdapter; },
   setCloudinaryAdapter(adapter) { cloudinaryAdapter = adapter; },
   put: (rel, buffer) => localAdapter.put(rel, buffer),
+  exists: (rel) => localAdapter.exists(rel),
   stream: (rel) => localAdapter.stream(rel),
   remove: (relOrFile) => {
     if (relOrFile && typeof relOrFile === 'object') return storage.removeFile(relOrFile);

@@ -10,7 +10,7 @@ export function createApp() {
   const app = express();
   app.set('trust proxy', 1);
   app.use(requestId);
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cors({ origin: config.corsOrigin, credentials: true }));
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());

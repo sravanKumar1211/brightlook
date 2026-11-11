@@ -2,7 +2,12 @@ import { config } from '../../config/environment.js';
 import { asyncHandler, send, requestContext } from '../../utils/helpers.js';
 import * as service from './auth.service.js';
 
-const cookieBase = { httpOnly: true, sameSite: 'lax', secure: config.isProd };
+const cookieBase = {
+  httpOnly: true,
+  sameSite: config.cookieSameSite,
+  secure: config.cookieSecure,
+  ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
+};
 
 function setSessionCookies(res, { accessToken, refreshToken, refreshExpiresAt }) {
   res.cookie('access_token', accessToken, { ...cookieBase, path: '/' });

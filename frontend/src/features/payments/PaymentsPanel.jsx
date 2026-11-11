@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api, { errorMessage, toFormData, unwrap, fileUrl } from '../../services/api.js';
+import api, { apiUrl, errorMessage, toFormData, unwrap } from '../../services/api.js';
 import { useFetch } from '../../hooks/useFetch.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { fmtDate, inr, label } from '../../utils/format.js';
@@ -15,7 +15,7 @@ export function InvoiceLinks({ payment }) {
   return (
     <div>
       <strong className="small">{payment.invoiceNumber}</strong>
-      <div className="small"><a href={`/api/v1/payments/${payment.id}/invoice`}>Download (Word)</a></div>
+      <div className="small"><a href={apiUrl(`/api/v1/payments/${payment.id}/invoice`)}>Download (Word)</a></div>
     </div>
   );
 }

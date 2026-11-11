@@ -30,10 +30,8 @@ export async function serveFile(req, res) {
   if (!file) throw notFound('File');
   if (!(await canAccess(req.user, file))) throw forbidden('You do not have access to this file');
 
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Cache-Control', 'private, max-age=300');
   const safeName = encodeURIComponent(file.originalName);
-  res.setHeader('Content-Disposition', `${req.query.download ? 'attachment' : 'inline'}; filename*=UTF-8''${safeName}`);
+  const disposition = `${req.query.download ? 'attachment' : 'inline'}; filename*=UTF-8''${safeName}`;
 
   if (file.storageProvider === 'cloudinary' && file.externalUrl) {
     const controller = new AbortController();
@@ -54,6 +52,9 @@ export async function serveFile(req, res) {
       throw new AppError(502, 'Unable to stream media from storage provider');
     }
     res.status(upstream.status);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.setHeader('Content-Disposition', disposition);
     res.setHeader('Content-Type', upstream.headers.get('content-type') || file.mimeType);
     res.setHeader('Accept-Ranges', upstream.headers.get('accept-ranges') || 'bytes');
     const contentLength = upstream.headers.get('content-length');
@@ -66,6 +67,10 @@ export async function serveFile(req, res) {
     return nodeStream.pipe(res);
   }
 
+  if (!(await storage.exists(file.relativePath))) throw notFound('File');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'private, max-age=300');
+  res.setHeader('Content-Disposition', disposition);
   res.setHeader('Content-Type', file.mimeType);
   res.setHeader('Content-Length', String(file.fileSize));
   storage.stream(file.relativePath).on('error', () => res.destroy()).pipe(res);

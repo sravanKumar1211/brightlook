@@ -4,16 +4,18 @@ import { DataSource } from 'typeorm';
 import { config } from './environment.js';
 import { createPgliteDriver, PARSERS } from './pgliteDriver.js';
 import { ALL_ENTITIES } from '../entities/index.js';
+import { logger } from '../utils/logger.js';
 
 // TypeORM DataSource and EntityManager accessors.
 // IMPORTANT: inside withTx((tx) => ...), always pass the provided `tx` EntityManager, never getManager().
 let dataSource;
 let activeDriverName;
 
-export async function initDb() {
+export async function initDb({ direct = false } = {}) {
   if (dataSource?.isInitialized) return dataSource;
 
-  const isPg = Boolean(config.databaseUrl);
+  const targetUrl = direct ? (config.directDatabaseUrl || config.databaseUrl) : config.databaseUrl;
+  const isPg = Boolean(targetUrl);
   activeDriverName = isPg ? 'postgres' : 'pglite';
 
   if (isPg) {
@@ -22,12 +24,22 @@ export async function initDb() {
     }
   }
 
+  const needsImplicitSsl = isPg
+    && !/[?&]sslmode=/i.test(targetUrl)
+    && (config.isProd || /\.neon\.tech/i.test(targetUrl));
+
   dataSource = new DataSource({
     type: 'postgres',
     ...(isPg
       ? {
-          url: config.databaseUrl,
-          extra: { max: 10 },
+          url: targetUrl,
+          ...(needsImplicitSsl ? { ssl: { rejectUnauthorized: true } } : {}),
+          poolErrorHandler: (err) => logger.warn('Postgres pool error', { error: err?.message }),
+          extra: {
+            max: 10,
+            idleTimeoutMillis: 20000,
+            connectionTimeoutMillis: 15000,
+          },
         }
       : {
           driver: createPgliteDriver({ dataDir: config.pgliteDir }),

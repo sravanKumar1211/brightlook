@@ -8,8 +8,8 @@ import { logger } from './utils/logger.js';
 
 const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../migrations');
 
-export async function runMigrations() {
-  await initDb();
+export async function runMigrations({ direct = false } = {}) {
+  await initDb({ direct });
   const ds = getDataSource();
   const qr = ds.createQueryRunner();
   await qr.connect();
@@ -53,7 +53,7 @@ export async function runMigrations() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  runMigrations()
+  runMigrations({ direct: true })
     .then((ran) => logger.info('migrations complete', { applied: ran.length }))
     .catch((err) => { logger.error('migration failed', { error: err.message }); process.exitCode = 1; })
     .finally(closeDb);

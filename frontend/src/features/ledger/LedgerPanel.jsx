@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api, { unwrap } from '../../services/api.js';
+import api, { apiUrl, unwrap } from '../../services/api.js';
 import { useFetch } from '../../hooks/useFetch.js';
 import { fmtDate, label } from '../../utils/format.js';
 import { Async } from '../../components/common/ui.jsx';
@@ -12,7 +12,7 @@ export default function LedgerPanel({ projectId }) {
   const [range, setRange] = useState({ from: '', to: '' });
   const qs = new URLSearchParams(Object.fromEntries(Object.entries(range).filter(([, v]) => v))).toString();
   const { data, loading, error, reload } = useFetch(() => unwrap(api.get(`/projects/${projectId}/ledger${qs ? `?${qs}` : ''}`)), [projectId, qs]);
-  const csvUrl = `/api/v1/projects/${projectId}/ledger?${new URLSearchParams({ ...Object.fromEntries(Object.entries(range).filter(([, v]) => v)), format: 'xlsx' })}`;
+  const csvUrl = apiUrl(`/api/v1/projects/${projectId}/ledger?${new URLSearchParams({ ...Object.fromEntries(Object.entries(range).filter(([, v]) => v)), format: 'xlsx' })}`);
 
   return (
     <div className="stack">

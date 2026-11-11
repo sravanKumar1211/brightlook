@@ -7,7 +7,7 @@ import { ProgressBar } from '../src/components/common/ui.jsx';
 import { paymentProgressFromApi } from './helpers.js';
 import { progressSplit, inr } from '../src/utils/format.js';
 import { checkFile, positive, percent, MEDIA_TYPES } from '../src/utils/validators.js';
-import { fileUrl } from '../src/services/api.js';
+import { fileUrl, apiUrl } from '../src/services/api.js';
 import { AttachmentGallery } from '../src/components/common/Files.jsx';
 
 let mockUser = null;
@@ -88,6 +88,8 @@ describe('form validators', () => {
   it('prefers direct Cloudinary URLs for viewing and renders video players', () => {
     expect(fileUrl('id-1', false, 'https://res.cloudinary.com/demo/video/upload/v1/clip.mp4')).toBe('https://res.cloudinary.com/demo/video/upload/v1/clip.mp4');
     expect(fileUrl('id-1', true, 'https://res.cloudinary.com/demo/video/upload/v1/clip.mp4')).toBe('/api/v1/files/id-1?download=1');
+    expect(apiUrl('/api/v1/payments/p1/invoice')).toBe('/api/v1/payments/p1/invoice');
+    expect(apiUrl('api/v1/projects/1/ledger')).toBe('/api/v1/projects/1/ledger');
     render(<AttachmentGallery files={[
       { id: 'img-1', name: 'site.jpg', mimeType: 'image/jpeg', url: 'https://res.cloudinary.com/demo/image/upload/site.jpg' },
       { id: 'vid-1', name: 'walkthrough.mp4', mimeType: 'video/mp4', url: 'https://res.cloudinary.com/demo/video/upload/walkthrough.mp4' },

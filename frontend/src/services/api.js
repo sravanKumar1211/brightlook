@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+export const apiUrl = (path = '') => `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: apiUrl('/api/v1'),
   withCredentials: true,
   headers: { 'X-Requested-With': 'brightlook' }, // CSRF guard header required by the API
 });
@@ -47,7 +50,7 @@ export function toFormData(fields = {}, files = {}) {
 
 export const fileUrl = (id, download = false, directUrl = null) => {
   if (directUrl && !download) return directUrl;
-  return id ? `/api/v1/files/${id}${download ? '?download=1' : ''}` : null;
+  return id ? apiUrl(`/api/v1/files/${id}${download ? '?download=1' : ''}`) : null;
 };
 export const unwrap = (promise) => promise.then((r) => ({ data: r.data.data, meta: r.data.meta }));
 export default api;

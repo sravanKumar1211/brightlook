@@ -4,9 +4,19 @@ const env = process.env;
 const isProd = env.NODE_ENV === 'production';
 const isHostedProd = isProd || env.RENDER === 'true';
 
+const cleanUrl = (value) => String(value || '').trim().replace(/^['"]|['"]$/g, '').trim();
+const databaseUrl = cleanUrl(env.DATABASE_URL);
+const directDatabaseUrl = cleanUrl(env.DIRECT_DATABASE_URL || env.DATABASE_URL_UNPOOLED || databaseUrl);
+
 if (isProd && !env.JWT_SECRET) throw new Error('JWT_SECRET must be set in production');
-if (isHostedProd && !env.DATABASE_URL && env.ALLOW_PGLITE_IN_PROD !== 'true') {
+if (isHostedProd && !databaseUrl && env.ALLOW_PGLITE_IN_PROD !== 'true') {
   throw new Error('DATABASE_URL must be set in production / Render (cannot fall back to ephemeral PGlite)');
+}
+if (databaseUrl && !/^postgres(?:ql)?:\/\//i.test(databaseUrl)) {
+  throw new Error('DATABASE_URL must be a valid postgres:// or postgresql:// URI');
+}
+if (directDatabaseUrl && !/^postgres(?:ql)?:\/\//i.test(directDatabaseUrl)) {
+  throw new Error('DIRECT_DATABASE_URL / DATABASE_URL_UNPOOLED must be a valid postgres:// or postgresql:// URI');
 }
 
 const rawSameSite = (env.COOKIE_SAME_SITE || (isHostedProd ? 'none' : 'lax')).trim().toLowerCase();
@@ -18,8 +28,8 @@ export const config = {
   isTest: env.NODE_ENV === 'test',
   port: Number(env.PORT || 4000),
   // If DATABASE_URL is set we use PostgreSQL via pg. Otherwise an embedded Postgres (PGlite) is used.
-  databaseUrl: (env.DATABASE_URL || '').trim(),
-  directDatabaseUrl: (env.DIRECT_DATABASE_URL || env.DATABASE_URL_UNPOOLED || env.DATABASE_URL || '').trim(),
+  databaseUrl,
+  directDatabaseUrl,
   pgliteDir: env.PGLITE_DIR || './data/pgdata', // use "memory" for an ephemeral DB
   jwtSecret: env.JWT_SECRET || 'dev-only-secret-change-me',
   accessTtl: env.ACCESS_TOKEN_TTL || '15m',

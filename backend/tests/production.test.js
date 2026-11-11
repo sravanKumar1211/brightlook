@@ -42,23 +42,58 @@ describe('production environment & runtime guards', () => {
       JWT_SECRET: 'dev-secret',
       DATABASE_URL: '',
     })).rejects.toThrow(/DATABASE_URL must be set/);
+
+    await expect(evalEnv({
+      NODE_ENV: 'production',
+      JWT_SECRET: 'super-secret-prod-key',
+      DATABASE_URL: "psql 'postgresql://user:pass@host/neondb'",
+    })).rejects.toThrow(/DATABASE_URL must be a valid postgres/);
   });
 
-  it('normalizes CORS origins, pooled/direct DB URLs, and cross-origin cookie flags', async () => {
+  it('normalizes CORS origins, quoted DB URLs, pooled/direct DB URLs, and cross-origin cookie flags', async () => {
     const cfg = await evalEnv({
       NODE_ENV: 'production',
       JWT_SECRET: 'super-secret-prod-key',
-      DATABASE_URL: 'postgresql://user:pass@ep-demo-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require',
-      DATABASE_URL_UNPOOLED: 'postgresql://user:pass@ep-demo.us-east-2.aws.neon.tech/neondb?sslmode=require',
+      DATABASE_URL: ' "postgresql://user:pass@ep-demo-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require" ',
+      DATABASE_URL_UNPOOLED: ' "postgresql://user:pass@ep-demo.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require" ',
       CORS_ORIGIN: ' https://crm.example.com/ , https://admin.example.com/// ',
       COOKIE_DOMAIN: ' .example.com ',
     });
     expect(cfg.corsOrigin).toEqual(['https://crm.example.com', 'https://admin.example.com']);
+    expect(cfg.databaseUrl).toBe('postgresql://user:pass@ep-demo-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require');
     expect(cfg.directDatabaseUrl).toContain('ep-demo.us-east-2.aws.neon.tech');
     expect(cfg.directDatabaseUrl).not.toContain('-pooler');
     expect(cfg.cookieSameSite).toBe('none');
     expect(cfg.cookieSecure).toBe(true);
     expect(cfg.cookieDomain).toBe('.example.com');
+  });
+
+  it('verifies /health and /health?db=1 connectivity reporting', async () => {
+    process.env.PGLITE_DIR = 'memory';
+    const db = await import('../src/config/database.js');
+    const { healthCheck } = await import('../src/routes/index.js');
+    await db.initDb();
+
+    try {
+      const makeRes = () => {
+        const res = { statusCode: 200, body: null };
+        res.status = (code) => { res.statusCode = code; return res; };
+        res.json = (payload) => { res.body = payload; return res; };
+        return res;
+      };
+
+      const shallowRes = makeRes();
+      await healthCheck({ query: {} }, shallowRes);
+      expect(shallowRes.statusCode).toBe(200);
+      expect(shallowRes.body).toEqual({ success: true, message: 'OK' });
+
+      const deepRes = makeRes();
+      await healthCheck({ query: { db: '1' } }, deepRes);
+      expect(deepRes.statusCode).toBe(200);
+      expect(deepRes.body).toEqual({ success: true, message: 'OK', database: 'pglite', connected: true });
+    } finally {
+      await db.closeDb();
+    }
   });
 
   it('returns clean 404 before streaming headers when a legacy local file is missing on disk', async () => {

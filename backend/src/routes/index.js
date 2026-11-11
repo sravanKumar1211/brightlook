@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { csrfGuard } from '../middleware/auth.js';
+import { driverName, pingDb } from '../config/database.js';
+import { logger } from '../utils/logger.js';
 import purgeRoutes from '../modules/purge/purge.routes.js';
 import authRoutes from '../modules/auth/auth.routes.js';
 import usersRoutes from '../modules/users/users.routes.js';
@@ -14,9 +16,27 @@ import auditRoutes from '../modules/audit/audit.routes.js';
 import filesRoutes from '../modules/files/files.routes.js';
 import dashboardRoutes from '../modules/dashboard/dashboard.routes.js';
 
+export async function healthCheck(req, res) {
+  if (req.query?.db !== '1' && req.query?.db !== 'true') {
+    return res.json({ success: true, message: 'OK' });
+  }
+  try {
+    await pingDb();
+    return res.json({ success: true, message: 'OK', database: driverName(), connected: true });
+  } catch (err) {
+    logger.warn('health db check failed', { error: err?.message });
+    return res.status(503).json({
+      success: false,
+      message: 'Database unavailable',
+      database: driverName() || null,
+      connected: false,
+    });
+  }
+}
+
 const router = Router();
 router.use(csrfGuard);
-router.get('/health', (req, res) => res.json({ success: true, message: 'OK' }));
+router.get('/health', healthCheck);
 router.use('/', purgeRoutes);
 router.use('/auth', authRoutes);
 router.use('/users', usersRoutes);

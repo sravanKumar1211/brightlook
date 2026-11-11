@@ -11,6 +11,16 @@ import { logger } from '../utils/logger.js';
 let dataSource;
 let activeDriverName;
 
+const TRANSIENT_PG_CODES = new Set(['ETIMEDOUT', 'ECONNRESET', 'ECONNREFUSED', 'EAI_AGAIN', '57P01', '57P02', '57P03']);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isTransientInitError(err) {
+  const code = err?.code || err?.driverError?.code;
+  if (code && TRANSIENT_PG_CODES.has(code)) return true;
+  const msg = String(err?.message || '').toLowerCase();
+  return msg.includes('timeout') || msg.includes('terminated unexpectedly') || msg.includes('econnreset');
+}
+
 export async function initDb({ direct = false } = {}) {
   if (dataSource?.isInitialized) return dataSource;
 
@@ -38,7 +48,9 @@ export async function initDb({ direct = false } = {}) {
           extra: {
             max: 10,
             idleTimeoutMillis: 20000,
-            connectionTimeoutMillis: 15000,
+            connectionTimeoutMillis: 20000,
+            keepAlive: true,
+            keepAliveInitialDelayMillis: 10000,
           },
         }
       : {
@@ -52,13 +64,33 @@ export async function initDb({ direct = false } = {}) {
     logging: false,
   });
 
-  await dataSource.initialize();
+  const maxAttempts = isPg ? 3 : 1;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await dataSource.initialize();
+      return dataSource;
+    } catch (err) {
+      if (attempt < maxAttempts && isTransientInitError(err)) {
+        logger.warn('Postgres initial connection retrying', { attempt, error: err?.message });
+        await sleep(1500 * attempt);
+        continue;
+      }
+      dataSource = undefined;
+      activeDriverName = undefined;
+      throw err;
+    }
+  }
   return dataSource;
 }
 
 export const getDataSource = () => {
   if (!dataSource?.isInitialized) throw new Error('Database not initialized');
   return dataSource;
+};
+
+export const pingDb = async () => {
+  await getDataSource().query('SELECT 1 AS ok');
+  return true;
 };
 
 export const getManager = () => getDataSource().manager;

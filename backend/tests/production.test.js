@@ -19,6 +19,7 @@ async function evalEnv(extraEnv) {
   delete cleanEnv.COOKIE_SAME_SITE;
   delete cleanEnv.COOKIE_DOMAIN;
   delete cleanEnv.ALLOW_PGLITE_IN_PROD;
+  delete cleanEnv.RENDER;
   const code = "import { config } from './src/config/environment.js'; console.log(JSON.stringify(config));";
   const { stdout } = await execFileAsync(process.execPath, ['--input-type=module', '-e', code], {
     cwd: BACKEND_ROOT,
@@ -28,12 +29,19 @@ async function evalEnv(extraEnv) {
 }
 
 describe('production environment & runtime guards', () => {
-  it('fails fast in production when DATABASE_URL is missing', async () => {
+  it('fails fast in production or on Render when DATABASE_URL is missing', async () => {
     await expect(evalEnv({
       NODE_ENV: 'production',
       JWT_SECRET: 'super-secret-prod-key',
       DATABASE_URL: '',
-    })).rejects.toThrow(/DATABASE_URL must be set in production/);
+    })).rejects.toThrow(/DATABASE_URL must be set/);
+
+    await expect(evalEnv({
+      NODE_ENV: 'development',
+      RENDER: 'true',
+      JWT_SECRET: 'dev-secret',
+      DATABASE_URL: '',
+    })).rejects.toThrow(/DATABASE_URL must be set/);
   });
 
   it('normalizes CORS origins, pooled/direct DB URLs, and cross-origin cookie flags', async () => {

@@ -2,14 +2,15 @@ import 'dotenv/config';
 
 const env = process.env;
 const isProd = env.NODE_ENV === 'production';
+const isHostedProd = isProd || env.RENDER === 'true';
 
 if (isProd && !env.JWT_SECRET) throw new Error('JWT_SECRET must be set in production');
-if (isProd && !env.DATABASE_URL && env.ALLOW_PGLITE_IN_PROD !== 'true') {
-  throw new Error('DATABASE_URL must be set in production');
+if (isHostedProd && !env.DATABASE_URL && env.ALLOW_PGLITE_IN_PROD !== 'true') {
+  throw new Error('DATABASE_URL must be set in production / Render (cannot fall back to ephemeral PGlite)');
 }
 
-const rawSameSite = (env.COOKIE_SAME_SITE || (isProd ? 'none' : 'lax')).trim().toLowerCase();
-const cookieSameSite = ['lax', 'strict', 'none'].includes(rawSameSite) ? rawSameSite : (isProd ? 'none' : 'lax');
+const rawSameSite = (env.COOKIE_SAME_SITE || (isHostedProd ? 'none' : 'lax')).trim().toLowerCase();
+const cookieSameSite = ['lax', 'strict', 'none'].includes(rawSameSite) ? rawSameSite : (isHostedProd ? 'none' : 'lax');
 
 export const config = {
   env: env.NODE_ENV || 'development',
@@ -29,7 +30,7 @@ export const config = {
     .map((s) => s.trim().replace(/\/+$/, ''))
     .filter(Boolean),
   cookieSameSite,
-  cookieSecure: isProd || cookieSameSite === 'none',
+  cookieSecure: isHostedProd || cookieSameSite === 'none',
   cookieDomain: env.COOKIE_DOMAIN ? env.COOKIE_DOMAIN.trim() : undefined,
   uploadDir: env.UPLOAD_DIR || './uploads',
   maxUploadBytes: Number(env.MAX_UPLOAD_MB || 10) * 1024 * 1024,

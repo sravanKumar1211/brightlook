@@ -15,6 +15,7 @@ export function createApp() {
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
   app.use(requestLogger);
+  app.get('/', (_req, res) => res.json({ success: true, service: 'brightlook-crm-api', health: '/api/v1/health' }));
   app.use('/api/v1', apiLimiter, routes);
   app.use(notFoundHandler);
   app.use(errorHandler);

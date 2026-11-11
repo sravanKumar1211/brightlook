@@ -180,3 +180,35 @@ describe('simplified stage plan editor', () => {
     expect(diffDays('2026-03-01', '2026-03-15') + 1).toBe(15);
   });
 });
+
+import { startHealthKeepAlive, HEALTH_PING_INTERVAL_MS, isHealthKeepAliveEnabled } from '../src/utils/healthKeepAlive.js';
+describe('backend health keep-alive timer', () => {
+  it('stays disabled by default in test mode and pings /api/v1/health every 1 minute when enabled', async () => {
+    expect(isHealthKeepAliveEnabled()).toBe(false);
+    expect(HEALTH_PING_INTERVAL_MS).toBe(60_000);
+
+    vi.useFakeTimers();
+    try {
+      const mockFetch = vi.fn().mockRejectedValueOnce(new Error('transient cold start')).mockResolvedValue({ ok: true });
+      const stop = startHealthKeepAlive({ enabled: true, fetcher: mockFetch });
+
+      expect(mockFetch).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        '/api/v1/health',
+        expect.objectContaining({ method: 'GET', cache: 'no-store', credentials: 'omit' }),
+      );
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+
+      stop();
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
@@ -9,6 +10,7 @@ import AdminUsers from './pages/admin/AdminUsers.jsx';
 import { PMDashboard, PMProjects, PMProjectPage, PMBills } from './pages/pm/PMPages.jsx';
 import { CustomerDashboard, CustomerProjectPage } from './pages/customer/CustomerPages.jsx';
 import { ROLE_HOME } from './utils/format.js';
+import { startHealthKeepAlive } from './utils/healthKeepAlive.js';
 
 function RootRedirect() {
   const { user, loading } = useAuth();
@@ -17,6 +19,7 @@ function RootRedirect() {
 }
 
 export default function App() {
+  useEffect(() => startHealthKeepAlive(), []);
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

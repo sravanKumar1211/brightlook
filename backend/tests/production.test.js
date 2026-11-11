@@ -10,16 +10,19 @@ const execFileAsync = promisify(execFile);
 const BACKEND_ROOT = path.resolve(import.meta.dirname, '..');
 
 async function evalEnv(extraEnv) {
-  const cleanEnv = { ...process.env };
-  delete cleanEnv.DATABASE_URL;
-  delete cleanEnv.DIRECT_DATABASE_URL;
-  delete cleanEnv.DATABASE_URL_UNPOOLED;
-  delete cleanEnv.JWT_SECRET;
-  delete cleanEnv.CORS_ORIGIN;
-  delete cleanEnv.COOKIE_SAME_SITE;
-  delete cleanEnv.COOKIE_DOMAIN;
-  delete cleanEnv.ALLOW_PGLITE_IN_PROD;
-  delete cleanEnv.RENDER;
+  const cleanEnv = {
+    ...process.env,
+    DOTENV_CONFIG_PATH: path.join(os.tmpdir(), 'brightlook-nonexistent-dotenv.env'),
+    DATABASE_URL: '',
+    DIRECT_DATABASE_URL: '',
+    DATABASE_URL_UNPOOLED: '',
+    JWT_SECRET: '',
+    CORS_ORIGIN: '',
+    COOKIE_SAME_SITE: '',
+    COOKIE_DOMAIN: '',
+    ALLOW_PGLITE_IN_PROD: '',
+    RENDER: '',
+  };
   const code = "import { config } from './src/config/environment.js'; console.log(JSON.stringify(config));";
   const { stdout } = await execFileAsync(process.execPath, ['--input-type=module', '-e', code], {
     cwd: BACKEND_ROOT,

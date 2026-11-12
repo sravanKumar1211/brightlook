@@ -25,6 +25,7 @@ const cookieSameSite = ['lax', 'strict', 'none'].includes(rawSameSite) ? rawSame
 export const config = {
   env: env.NODE_ENV || 'development',
   isProd,
+  isHostedProd,
   isTest: env.NODE_ENV === 'test',
   port: Number(env.PORT || 4000),
   // If DATABASE_URL is set we use PostgreSQL via pg. Otherwise an embedded Postgres (PGlite) is used.
@@ -53,6 +54,15 @@ export const config = {
     folder: env.CLOUDINARY_FOLDER || 'brightlook-crm',
   },
 };
+
+export const HOSTED_CORS_ORIGINS = [
+  'https://app.brightlookhomes.in',
+  'https://brightlookhomes.in',
+  'https://www.brightlookhomes.in',
+  'https://brightlook.vercel.app',
+  'https://brightlook-sravankumars-projects-790f1948.vercel.app',
+  'https://brightlook-*-sravankumars-projects-790f1948.vercel.app',
+];
 
 export function isCorsOriginAllowed(origin, allowedPatterns = config.corsOrigin) {
   if (!origin) return true;

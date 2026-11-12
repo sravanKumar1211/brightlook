@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { PassThrough, Writable } from 'node:stream';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -8,6 +8,12 @@ import path from 'node:path';
 
 const execFileAsync = promisify(execFile);
 const BACKEND_ROOT = path.resolve(import.meta.dirname, '..');
+
+beforeAll(() => {
+  process.env.NODE_ENV = 'test';
+  process.env.DATABASE_URL = '';
+  process.env.PGLITE_DIR = 'memory';
+});
 
 async function evalEnv(extraEnv) {
   const cleanEnv = {
@@ -72,13 +78,16 @@ describe('production environment & runtime guards', () => {
   });
 
   it('matches exact and single-label wildcard CORS origins safely', async () => {
-    const { isCorsOriginAllowed } = await import('../src/config/environment.js');
+    const { HOSTED_CORS_ORIGINS, isCorsOriginAllowed } = await import('../src/config/environment.js');
     const patterns = [
       'https://crm.brightlook.in',
       'https://brightlook-*-sravankumars-projects-790f1948.vercel.app',
     ];
     expect(isCorsOriginAllowed('https://crm.brightlook.in', patterns)).toBe(true);
     expect(isCorsOriginAllowed('https://brightlook-dxy8xf6ej-sravankumars-projects-790f1948.vercel.app', patterns)).toBe(true);
+    expect(isCorsOriginAllowed('https://app.brightlookhomes.in', HOSTED_CORS_ORIGINS)).toBe(true);
+    expect(isCorsOriginAllowed('https://brightlook-git-main-sravankumars-projects-790f1948.vercel.app', HOSTED_CORS_ORIGINS)).toBe(true);
+    expect(isCorsOriginAllowed('https://brightlook-cynlp5ycb-sravankumars-projects-790f1948.vercel.app', HOSTED_CORS_ORIGINS)).toBe(true);
     expect(isCorsOriginAllowed('https://evil.com', patterns)).toBe(false);
     expect(isCorsOriginAllowed('https://brightlook-a.b-sravankumars-projects-790f1948.vercel.app', patterns)).toBe(false);
     expect(isCorsOriginAllowed('https://any.example.com', ['*'])).toBe(false);

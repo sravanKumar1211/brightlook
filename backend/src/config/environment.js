@@ -53,3 +53,14 @@ export const config = {
     folder: env.CLOUDINARY_FOLDER || 'brightlook-crm',
   },
 };
+
+export function isCorsOriginAllowed(origin, allowedPatterns = config.corsOrigin) {
+  if (!origin) return true;
+  const normalized = String(origin).trim().replace(/\/+$/, '');
+  return allowedPatterns.some((pattern) => {
+    if (!pattern || pattern === '*') return false;
+    if (!pattern.includes('*')) return pattern === normalized;
+    const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[a-zA-Z0-9-]+');
+    return new RegExp(`^${escaped}$`).test(normalized);
+  });
+}

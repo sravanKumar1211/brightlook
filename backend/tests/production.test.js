@@ -71,6 +71,19 @@ describe('production environment & runtime guards', () => {
     expect(cfg.cookieDomain).toBe('.example.com');
   });
 
+  it('matches exact and single-label wildcard CORS origins safely', async () => {
+    const { isCorsOriginAllowed } = await import('../src/config/environment.js');
+    const patterns = [
+      'https://crm.brightlook.in',
+      'https://brightlook-*-sravankumars-projects-790f1948.vercel.app',
+    ];
+    expect(isCorsOriginAllowed('https://crm.brightlook.in', patterns)).toBe(true);
+    expect(isCorsOriginAllowed('https://brightlook-dxy8xf6ej-sravankumars-projects-790f1948.vercel.app', patterns)).toBe(true);
+    expect(isCorsOriginAllowed('https://evil.com', patterns)).toBe(false);
+    expect(isCorsOriginAllowed('https://brightlook-a.b-sravankumars-projects-790f1948.vercel.app', patterns)).toBe(false);
+    expect(isCorsOriginAllowed('https://any.example.com', ['*'])).toBe(false);
+  });
+
   it('verifies /health and /health?db=1 connectivity reporting', async () => {
     process.env.PGLITE_DIR = 'memory';
     const db = await import('../src/config/database.js');

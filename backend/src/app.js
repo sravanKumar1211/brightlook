@@ -2,7 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { config } from './config/environment.js';
+import { config, isCorsOriginAllowed } from './config/environment.js';
 import { requestId, requestLogger, apiLimiter, errorHandler, notFoundHandler } from './middleware/common.js';
 import routes from './routes/index.js';
 
@@ -11,7 +11,10 @@ export function createApp() {
   app.set('trust proxy', 1);
   app.use(requestId);
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-  app.use(cors({ origin: config.corsOrigin, credentials: true }));
+  app.use(cors({
+    origin: (origin, callback) => callback(null, isCorsOriginAllowed(origin)),
+    credentials: true,
+  }));
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
   app.use(requestLogger);
